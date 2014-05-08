@@ -7,7 +7,7 @@ import os
 import redis
 import heapq
 
-ARTICLES_ROOT = 'test/articles/'
+ARTICLES_ROOT = 'examples/articles/'
 r = redis.StrictRedis(host="localhost", port=6379, db=0)
 
 def main():
@@ -27,11 +27,30 @@ def main():
     stopWordsParser = StopWordsParser(open('resources/stopwords_formatted.1.txt'))
     withoutStopWords = stopWordsParser.removeStopWords(articlesDict[article])
     tokens = nltk.word_tokenize(withoutStopWords)
-    #stemmedTokens = TokenStemmer(tokens).getStemmedTokens()
+    stemmedTokens = TokenStemmer(tokens).getStemmedTokens()
     #doing this totally the wrong way. have to do a word count first of the words in the thing
-    countOfTokens = count(tokens)
-    print countOfTokens
-    #analyze(set(tokens))
+    countOfTokens = count(stemmedTokens)
+    tokenCounts = toTokenCount(countOfTokens)
+    tokenCounts.sort(reverse=True)
+
+    for i in range(0, len(tokenCounts)):
+      rValue = r.get(tokenCounts[i].key)
+      if rValue is not None: 
+        rValue = float(rValue)
+        wValue = float(tokenCounts[i].value)
+        print "------"
+        print tokenCounts[i].key
+        print (wValue / rValue) * 100
+        print "------"
+        
+
+    break
+
+def toTokenCount(tokens):
+  arr = []
+  for token in tokens:
+    arr.append(TokenCount(token, tokens[token]))
+  return arr
 
 def count(tokens):
   count = {}
@@ -41,6 +60,7 @@ def count(tokens):
     else:
       count[token] = 1
   return count
+
 def analyze(stemmedTokens):
   topHeap = []
   for token in stemmedTokens:
